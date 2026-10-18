@@ -96,8 +96,9 @@
       }
       case "monthly": {
         const s = parse(start);
+        const day = task.recurrence_month_day || s.d;
         for (let i = 0; i < 1200; i++) {
-          const cand = build(s.y, s.m + i, s.d);
+          const cand = build(s.y, s.m + i, day);
           if (cand > from) return cand;
         }
         return null;
@@ -113,6 +114,21 @@
       default:
         return null;
     }
+  }
+
+  // המועד הראשון מהיום והלאה (כולל היום) לפי יום בשבוע או יום בחודש שנבחרו.
+  function firstOnOrAfter(rule, from) {
+    return nextScheduled({ ...rule, due_date: from }, addDays(from, -1));
+  }
+
+  // האם תאריך מתאים לבחירה של יום בשבוע או יום בחודש.
+  function matchesRule(rule, iso) {
+    if (rule.recurrence_kind === "weekly") return (rule.recurrence_days || []).includes(weekday(iso));
+    if (rule.recurrence_kind === "monthly") {
+      const { y, m, d } = parse(iso);
+      return d === Math.min(rule.recurrence_month_day, daysInMonth(y, m));
+    }
+    return false;
   }
 
   // תאריך היעד החדש אחרי סימון "בוצע" במשימה חוזרת.
@@ -155,6 +171,6 @@
 
   window.Dates = {
     todayISO, addDays, addMonths, addYears, daysBetween, weekday,
-    formatDate, dayLabel, nextScheduled, nextDueDate, occurrences,
+    formatDate, dayLabel, nextScheduled, nextDueDate, occurrences, firstOnOrAfter, matchesRule, parse,
   };
 })();

@@ -26,6 +26,10 @@
     description: $("f-description"),
     type: $("f-type"),
     dueDate: $("f-due-date"),
+    dueDateBox: $("due-date-box"),
+    monthDay: $("f-month-day"),
+    monthDayBox: $("month-day-box"),
+    modeBox: $("mode-box"),
     dueTime: $("f-due-time"),
     recurrenceBox: $("recurrence-box"),
     kind: $("f-kind"),
@@ -68,12 +72,14 @@
         text = "שבועית: " + (t.recurrence_days || []).map((d) => WEEKDAYS[d]).join(", ");
         break;
       case "monthly":
-        text = "חודשית";
+        text = t.recurrence_month_day ? `חודשית, ביום ${t.recurrence_month_day}` : "חודשית";
         break;
       case "yearly":
         text = "שנתית";
         break;
     }
+    const fixedDay = t.recurrence_kind === "weekly" || t.recurrence_kind === "monthly";
+    if (fixedDay && t.recurrence_mode !== "after_completion") return text;
     const mode = t.recurrence_mode === "after_completion" ? "לפי ביצוע" : "לפי לוח";
     return `${text} (${mode})`;
   }
@@ -82,6 +88,9 @@
     const msg = (error && error.message) || "";
     if (error && error.code === "42501") {
       return "אין הרשאה לשמור נתונים. יש להריץ את חלק ההרשאות (grant) מקובץ supabase/schema.sql.";
+    }
+    if (msg.includes("recurrence_month_day")) {
+      return "חסר שדה יום בחודש בבסיס הנתונים. יש להריץ ב-Supabase את שורת ה-SQL של recurrence_month_day.";
     }
     return "הפעולה נכשלה: " + (msg || "שגיאה לא מוכרת");
   }
@@ -176,9 +185,15 @@
 
   function syncRecurrenceFields() {
     const recurring = els.type.value === "recurring";
+    const kind = els.kind.value;
+    const fixedDay = recurring && (kind === "weekly" || kind === "monthly");
     els.recurrenceBox.hidden = !recurring;
-    els.everyBox.hidden = !recurring || els.kind.value !== "interval";
-    els.daysBox.hidden = !recurring || els.kind.value !== "weekly";
+    els.everyBox.hidden = !recurring || kind !== "interval";
+    els.daysBox.hidden = !recurring || kind !== "weekly";
+    els.monthDayBox.hidden = !recurring || kind !== "monthly";
+    // בשבועית ובחודשית בוחרים יום קבוע, ולכן אין תאריך יעד ידני ואין בחירת אופן חישוב.
+    els.dueDateBox.hidden = fixedDay;
+    els.modeBox.hidden = fixedDay;
   }
 
   function selectedDays() {
@@ -197,6 +212,10 @@
     els.dueTime.value = task && task.due_time ? task.due_time.slice(0, 5) : "";
     els.kind.value = task && task.recurrence_kind ? task.recurrence_kind : "daily";
     els.every.value = task && task.recurrence_every ? task.recurrence_every : 2;
+    els.monthDay.value =
+      task && task.recurrence_month_day
+        ? task.recurrence_month_day
+        : Dates.parse(els.dueDate.value).d;
     els.mode.value = task && task.recurrence_mode ? task.recurrence_mode : "schedule";
     const days = task && task.recurrence_days ? task.recurrence_days : [];
     els.daysBox.querySelectorAll("input[name=day]").forEach((c) => {
@@ -214,9 +233,13 @@
   function buildPayload() {
     const title = els.title.value.trim();
     if (!title) return { error: "יש להזין כותרת." };
-    if (!els.dueDate.value) return { error: "יש להזין תאריך יעד." };
 
     const recurring = els.type.value === "recurring";
+    const kind = els.kind.value;
+    const fixedDay = recurring && (kind === "weekly" || kind === "monthly");
+    if (!fixedDay && !els.dueDate.value) return { error: "יש להזין תאריך יעד." };
+
+    const existing = editingId ? tasks.find((t) => t.id === editingId) : null;
     const payload = {
       title,
       description: els.description.value.trim() || null,
@@ -237,19 +260,47 @@
       return { error: "זמן משוער חייב להיות מספר שלם, 0 ומעלה." };
     }
 
+    // השדה recurrence_month_day נשלח רק כשצריך, כדי שמשימות אחרות ימשיכו להישמר גם לפני עדכון בסיס הנתונים.
+    let monthDay = null;
     if (recurring) {
-      payload.recurrence_kind = els.kind.value;
-      payload.recurrence_mode = els.mode.value;
-      if (payload.recurrence_kind === "interval") {
+      payload.recurrence_kind = kind;
+      payload.recurrence_mode = fixedDay ? "schedule" : els.mode.value;
+      if (kind === "interval") {
         const every = Number(els.every.value);
         if (!Number.isInteger(every) || every < 1) return { error: "מספר הימים חייב להיות 1 ומעלה." };
         payload.recurrence_every = every;
       }
-      if (payload.recurrence_kind === "weekly") {
+      if (kind === "weekly") {
         const days = selectedDays();
         if (days.length === 0) return { error: "יש לבחור לפחות יום אחד בשבוע." };
         payload.recurrence_days = days;
       }
+      if (kind === "monthly") {
+        monthDay = Number(els.monthDay.value);
+        if (!Number.isInteger(monthDay) || monthDay < 1 || monthDay > 31) {
+          return { error: "היום בחודש חייב להיות בין 1 ל-31." };
+        }
+      }
+    }
+    if (monthDay !== null) {
+      payload.recurrence_month_day = monthDay;
+    } else if (existing && existing.recurrence_month_day != null) {
+      payload.recurrence_month_day = null;
+    }
+
+    if (fixedDay) {
+      // המועד הראשון נקבע לפי היום שנבחר. בעריכה שומרים את המועד הקיים אם הוא עדיין מתאים.
+      const rule = {
+        recurrence_kind: kind,
+        recurrence_days: payload.recurrence_days,
+        recurrence_month_day: monthDay,
+      };
+      const keep =
+        existing &&
+        existing.type === "recurring" &&
+        existing.recurrence_kind === kind &&
+        Dates.matchesRule(rule, existing.due_date);
+      payload.due_date = keep ? existing.due_date : Dates.firstOnOrAfter(rule, todayISO());
     }
     return { payload };
   }
