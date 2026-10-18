@@ -30,6 +30,20 @@
     loginView.hidden = false;
   }
 
+  function loginErrorText(error) {
+    const msg = (error.message || "").toLowerCase();
+    if (error.code === "invalid_credentials" || msg.includes("invalid login credentials")) {
+      return "המייל או הסיסמה שגויים.";
+    }
+    if (error.code === "email_not_confirmed" || msg.includes("not confirmed")) {
+      return "המשתמש עדיין לא אושר ב-Supabase (יש לסמן Auto Confirm User).";
+    }
+    if (msg.includes("invalid api key") || msg.includes("apikey")) {
+      return "מפתח החיבור ל-Supabase שגוי. יש לבדוק את js/config.js.";
+    }
+    return "הכניסה נכשלה: " + (error.message || "שגיאה לא מוכרת");
+  }
+
   loginForm.addEventListener("submit", async (event) => {
     event.preventDefault();
     loginError.textContent = "";
@@ -43,7 +57,7 @@
 
     submitBtn.disabled = false;
     if (error) {
-      loginError.textContent = "הכניסה נכשלה. בדקי את המייל והסיסמה.";
+      loginError.textContent = loginErrorText(error);
       return;
     }
     loginForm.reset();
