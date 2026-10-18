@@ -303,3 +303,49 @@ legend { color: var(--muted); padding: 0 6px; }
   .task { flex-direction: column; }
   .task-actions { align-self: flex-end; }
 }
+
+/* ---------- לשוניות ומסכי היום והשבוע ---------- */
+
+.tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: var(--gap);
+}
+
+.tab {
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  color: var(--muted);
+  padding: 10px 16px;
+  margin-bottom: -1px;
+}
+
+.tab.active {
+  color: var(--text);
+  border-bottom-color: var(--accent);
+  font-weight: 600;
+}
+
+h3 {
+  font-size: 1rem;
+  margin: 0;
+  font-weight: 600;
+}
+
+.overdue-heading { color: var(--danger); margin: 8px 0; }
+.section-heading { margin: 20px 0 8px; }
+
+.day-group { margin-bottom: 22px; }
+
+.day-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--gap);
+  margin-bottom: 8px;
+}
+
+.day-group > p { margin: 0; }

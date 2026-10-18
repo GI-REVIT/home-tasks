@@ -72,3 +72,7 @@ grant select, insert, update, delete on public.tasks, public.completions, public
 -- אינדקסים לשאילתות של היום והשבוע
 create index if not exists tasks_user_due_idx on public.tasks (user_id, due_date) where status = 'active';
 create index if not exists completions_task_idx on public.completions (task_id, occurrence_date);
+
+-- מונע רישום כפול של אותו מופע (נדרש מהשלב השלישי)
+create unique index if not exists completions_task_occurrence_uniq
+  on public.completions (task_id, occurrence_date);

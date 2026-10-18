@@ -6,6 +6,7 @@
   let db = null;
   let tasks = [];
   let editingId = null;
+  const loadListeners = [];
 
   const $ = (id) => document.getElementById(id);
   const els = {
@@ -107,6 +108,7 @@
     tasks = data || [];
     refreshAssigneeFilter();
     render();
+    loadListeners.forEach((fn) => fn(tasks));
   }
 
   function refreshAssigneeFilter() {
@@ -299,5 +301,11 @@
     [els.filterType, els.filterStatus, els.filterAssignee].forEach((f) => f.addEventListener("change", render));
   }
 
-  window.TasksView = { init, load };
+  window.TasksView = {
+    init,
+    load,
+    getTasks: () => tasks,
+    recurrenceText,
+    onLoad: (fn) => loadListeners.push(fn),
+  };
 })();

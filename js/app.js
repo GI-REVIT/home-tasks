@@ -21,10 +21,28 @@
   const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
   window.TasksView.init(db);
+  window.AgendaView.init(db);
+
+  const views = {
+    today: document.getElementById("today-view"),
+    week: document.getElementById("week-view"),
+    all: document.getElementById("tasks-view"),
+  };
+  const tabs = document.querySelectorAll("#tabs .tab");
+
+  function showView(name) {
+    Object.entries(views).forEach(([key, section]) => {
+      section.hidden = key !== name;
+    });
+    tabs.forEach((tab) => tab.classList.toggle("active", tab.dataset.view === name));
+  }
+
+  tabs.forEach((tab) => tab.addEventListener("click", () => showView(tab.dataset.view)));
 
   function showApp() {
     loginView.hidden = true;
     appView.hidden = false;
+    showView("today");
     window.TasksView.load();
   }
 
