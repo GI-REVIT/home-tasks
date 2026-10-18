@@ -30,7 +30,42 @@
         <h1>משימות הבית</h1>
         <button id="logout-btn" class="ghost">יציאה</button>
       </header>
-      <p class="muted">המסכים של היום, השבוע, המשימות וההיסטוריה ייבנו בשלבים הבאים.</p>
+
+      <section id="tasks-view">
+        <div class="toolbar">
+          <h2>כל המשימות</h2>
+          <button id="new-task-btn" class="primary">משימה חדשה</button>
+        </div>
+
+        <div class="filters">
+          <label>
+            סוג
+            <select id="filter-type">
+              <option value="">הכל</option>
+              <option value="one_time">חד-פעמית</option>
+              <option value="recurring">חוזרת</option>
+            </select>
+          </label>
+          <label>
+            סטטוס
+            <select id="filter-status">
+              <option value="">הכל</option>
+              <option value="active">פעילה</option>
+              <option value="paused">מושהית</option>
+              <option value="completed">הושלמה</option>
+            </select>
+          </label>
+          <label>
+            אחראי
+            <select id="filter-assignee">
+              <option value="">הכל</option>
+            </select>
+          </label>
+        </div>
+
+        <p id="tasks-message" class="muted" role="status"></p>
+        <ul id="tasks-list" class="tasks-list"></ul>
+      </section>
     </section>
 
     <p id="config-warning" class="error" hidden>
@@ -39,8 +74,108 @@
 
   </main>
 
+  <dialog id="task-dialog">
+    <form id="task-form" class="stack" novalidate>
+      <h2 id="task-dialog-title">משימה חדשה</h2>
+
+      <label>
+        כותרת
+        <input type="text" id="f-title" maxlength="120" required>
+      </label>
+
+      <label>
+        תיאור (לא חובה)
+        <textarea id="f-description" rows="2"></textarea>
+      </label>
+
+      <div class="row">
+        <label>
+          סוג
+          <select id="f-type">
+            <option value="one_time">חד-פעמית</option>
+            <option value="recurring">חוזרת</option>
+          </select>
+        </label>
+        <label>
+          תאריך יעד
+          <input type="date" id="f-due-date" required>
+        </label>
+        <label>
+          שעה (לא חובה)
+          <input type="time" id="f-due-time">
+        </label>
+      </div>
+
+      <fieldset id="recurrence-box" hidden>
+        <legend>חזרתיות</legend>
+        <div class="row">
+          <label>
+            תדירות
+            <select id="f-kind">
+              <option value="daily">כל יום</option>
+              <option value="interval">כל כמה ימים</option>
+              <option value="weekly">שבועית, בימים נבחרים</option>
+              <option value="monthly">חודשית</option>
+              <option value="yearly">שנתית</option>
+            </select>
+          </label>
+          <label id="every-box" hidden>
+            כל כמה ימים
+            <input type="number" id="f-every" min="1" max="365" value="2">
+          </label>
+        </div>
+
+        <div id="days-box" class="days" hidden>
+          <span class="muted">ימים:</span>
+          <label class="day"><input type="checkbox" name="day" value="0"> א׳</label>
+          <label class="day"><input type="checkbox" name="day" value="1"> ב׳</label>
+          <label class="day"><input type="checkbox" name="day" value="2"> ג׳</label>
+          <label class="day"><input type="checkbox" name="day" value="3"> ד׳</label>
+          <label class="day"><input type="checkbox" name="day" value="4"> ה׳</label>
+          <label class="day"><input type="checkbox" name="day" value="5"> ו׳</label>
+          <label class="day"><input type="checkbox" name="day" value="6"> ש׳</label>
+        </div>
+
+        <label>
+          אופן החישוב של המועד הבא
+          <select id="f-mode">
+            <option value="schedule">לפי לוח (למשל כל יום ראשון)</option>
+            <option value="after_completion">לפי ביצוע (למשל שבוע אחרי שבוצע)</option>
+          </select>
+        </label>
+      </fieldset>
+
+      <div class="row">
+        <label>
+          זמן משוער בדקות (לא חובה)
+          <input type="number" id="f-minutes" min="0" max="1440">
+        </label>
+        <label>
+          אחראי (לא חובה)
+          <input type="text" id="f-assignee" maxlength="60">
+        </label>
+        <label>
+          סטטוס
+          <select id="f-status">
+            <option value="active">פעילה</option>
+            <option value="paused">מושהית</option>
+            <option value="completed">הושלמה</option>
+          </select>
+        </label>
+      </div>
+
+      <p id="task-form-error" class="error" role="alert"></p>
+
+      <div class="actions">
+        <button type="submit" class="primary" id="task-save-btn">שמירה</button>
+        <button type="button" id="task-cancel-btn">ביטול</button>
+      </div>
+    </form>
+  </dialog>
+
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
   <script src="js/config.js"></script>
+  <script src="js/tasks.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

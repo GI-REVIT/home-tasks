@@ -20,9 +20,12 @@
 
   const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+  window.TasksView.init(db);
+
   function showApp() {
     loginView.hidden = true;
     appView.hidden = false;
+    window.TasksView.load();
   }
 
   function showLogin() {

@@ -1,0 +1,303 @@
+// ניהול משימות: רשימה, סינון, הוספה, עריכה ומחיקה.
+(function () {
+  const WEEKDAYS = ["א׳", "ב׳", "ג׳", "ד׳", "ה׳", "ו׳", "ש׳"]; // 0 = ראשון
+  const STATUS_LABELS = { active: "פעילה", paused: "מושהית", completed: "הושלמה" };
+
+  let db = null;
+  let tasks = [];
+  let editingId = null;
+
+  const $ = (id) => document.getElementById(id);
+  const els = {
+    list: $("tasks-list"),
+    message: $("tasks-message"),
+    newBtn: $("new-task-btn"),
+    filterType: $("filter-type"),
+    filterStatus: $("filter-status"),
+    filterAssignee: $("filter-assignee"),
+    dialog: $("task-dialog"),
+    dialogTitle: $("task-dialog-title"),
+    form: $("task-form"),
+    formError: $("task-form-error"),
+    saveBtn: $("task-save-btn"),
+    cancelBtn: $("task-cancel-btn"),
+    title: $("f-title"),
+    description: $("f-description"),
+    type: $("f-type"),
+    dueDate: $("f-due-date"),
+    dueTime: $("f-due-time"),
+    recurrenceBox: $("recurrence-box"),
+    kind: $("f-kind"),
+    every: $("f-every"),
+    everyBox: $("every-box"),
+    daysBox: $("days-box"),
+    mode: $("f-mode"),
+    minutes: $("f-minutes"),
+    assignee: $("f-assignee"),
+    status: $("f-status"),
+  };
+
+  // ---------- עזרים ----------
+
+  function pad(n) {
+    return String(n).padStart(2, "0");
+  }
+
+  function todayISO() {
+    const d = new Date();
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  }
+
+  function formatDate(iso) {
+    const [y, m, d] = iso.split("-");
+    return `${d}/${m}/${y}`;
+  }
+
+  function recurrenceText(t) {
+    if (t.type !== "recurring") return "";
+    let text = "";
+    switch (t.recurrence_kind) {
+      case "daily":
+        text = "כל יום";
+        break;
+      case "interval":
+        text = `כל ${t.recurrence_every} ימים`;
+        break;
+      case "weekly":
+        text = "שבועית: " + (t.recurrence_days || []).map((d) => WEEKDAYS[d]).join(", ");
+        break;
+      case "monthly":
+        text = "חודשית";
+        break;
+      case "yearly":
+        text = "שנתית";
+        break;
+    }
+    const mode = t.recurrence_mode === "after_completion" ? "לפי ביצוע" : "לפי לוח";
+    return `${text} (${mode})`;
+  }
+
+  function friendlyError(error) {
+    const msg = (error && error.message) || "";
+    if (error && error.code === "42501") {
+      return "אין הרשאה לשמור נתונים. יש להריץ את חלק ההרשאות (grant) מקובץ supabase/schema.sql.";
+    }
+    return "הפעולה נכשלה: " + (msg || "שגיאה לא מוכרת");
+  }
+
+  function el(tag, className, text) {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined) node.textContent = text;
+    return node;
+  }
+
+  // ---------- טעינה ותצוגה ----------
+
+  async function load() {
+    els.message.textContent = "טוען…";
+    const { data, error } = await db
+      .from("tasks")
+      .select("*")
+      .order("due_date", { ascending: true });
+    if (error) {
+      els.message.textContent = friendlyError(error);
+      return;
+    }
+    tasks = data || [];
+    refreshAssigneeFilter();
+    render();
+  }
+
+  function refreshAssigneeFilter() {
+    const current = els.filterAssignee.value;
+    const names = [...new Set(tasks.map((t) => t.assignee).filter(Boolean))].sort();
+    els.filterAssignee.replaceChildren(new Option("הכל", ""));
+    names.forEach((n) => els.filterAssignee.add(new Option(n, n)));
+    els.filterAssignee.value = names.includes(current) ? current : "";
+  }
+
+  function filteredTasks() {
+    const type = els.filterType.value;
+    const status = els.filterStatus.value;
+    const assignee = els.filterAssignee.value;
+    return tasks.filter(
+      (t) =>
+        (!type || t.type === type) &&
+        (!status || t.status === status) &&
+        (!assignee || t.assignee === assignee)
+    );
+  }
+
+  function render() {
+    const items = filteredTasks();
+    els.list.replaceChildren();
+    if (tasks.length === 0) {
+      els.message.textContent = "אין עדיין משימות. אפשר להוסיף משימה חדשה.";
+      return;
+    }
+    els.message.textContent = items.length === 0 ? "אין משימות שמתאימות לסינון." : `${items.length} משימות`;
+    items.forEach((t) => els.list.appendChild(renderTask(t)));
+  }
+
+  function renderTask(t) {
+    const li = el("li", "task" + (t.status !== "active" ? " inactive" : ""));
+
+    const main = el("div", "task-main");
+    main.appendChild(el("div", "task-title", t.title));
+    if (t.description) main.appendChild(el("div", "muted", t.description));
+
+    const meta = el("div", "task-meta");
+    const due = formatDate(t.due_date) + (t.due_time ? " " + t.due_time.slice(0, 5) : "");
+    meta.appendChild(el("span", "badge", "יעד: " + due));
+    meta.appendChild(el("span", "badge", t.type === "recurring" ? "חוזרת" : "חד-פעמית"));
+    if (t.type === "recurring") meta.appendChild(el("span", "badge", recurrenceText(t)));
+    if (t.estimated_minutes != null) meta.appendChild(el("span", "badge", `${t.estimated_minutes} דק׳ משוער`));
+    if (t.assignee) meta.appendChild(el("span", "badge", "אחראי: " + t.assignee));
+    if (t.status !== "active") meta.appendChild(el("span", "badge warn", STATUS_LABELS[t.status]));
+    main.appendChild(meta);
+
+    const actions = el("div", "task-actions");
+    const editBtn = el("button", "", "עריכה");
+    editBtn.type = "button";
+    editBtn.addEventListener("click", () => openForm(t));
+    const delBtn = el("button", "ghost", "מחיקה");
+    delBtn.type = "button";
+    delBtn.addEventListener("click", () => removeTask(t));
+    actions.append(editBtn, delBtn);
+
+    li.append(main, actions);
+    return li;
+  }
+
+  // ---------- טופס ----------
+
+  function syncRecurrenceFields() {
+    const recurring = els.type.value === "recurring";
+    els.recurrenceBox.hidden = !recurring;
+    els.everyBox.hidden = !recurring || els.kind.value !== "interval";
+    els.daysBox.hidden = !recurring || els.kind.value !== "weekly";
+  }
+
+  function selectedDays() {
+    return [...els.daysBox.querySelectorAll("input[name=day]:checked")].map((c) => Number(c.value));
+  }
+
+  function openForm(task) {
+    editingId = task ? task.id : null;
+    els.dialogTitle.textContent = task ? "עריכת משימה" : "משימה חדשה";
+    els.formError.textContent = "";
+
+    els.title.value = task ? task.title : "";
+    els.description.value = task ? task.description || "" : "";
+    els.type.value = task ? task.type : "one_time";
+    els.dueDate.value = task ? task.due_date : todayISO();
+    els.dueTime.value = task && task.due_time ? task.due_time.slice(0, 5) : "";
+    els.kind.value = task && task.recurrence_kind ? task.recurrence_kind : "daily";
+    els.every.value = task && task.recurrence_every ? task.recurrence_every : 2;
+    els.mode.value = task && task.recurrence_mode ? task.recurrence_mode : "schedule";
+    const days = task && task.recurrence_days ? task.recurrence_days : [];
+    els.daysBox.querySelectorAll("input[name=day]").forEach((c) => {
+      c.checked = days.includes(Number(c.value));
+    });
+    els.minutes.value = task && task.estimated_minutes != null ? task.estimated_minutes : "";
+    els.assignee.value = task ? task.assignee || "" : "";
+    els.status.value = task ? task.status : "active";
+
+    syncRecurrenceFields();
+    els.dialog.showModal();
+    els.title.focus();
+  }
+
+  function buildPayload() {
+    const title = els.title.value.trim();
+    if (!title) return { error: "יש להזין כותרת." };
+    if (!els.dueDate.value) return { error: "יש להזין תאריך יעד." };
+
+    const recurring = els.type.value === "recurring";
+    const payload = {
+      title,
+      description: els.description.value.trim() || null,
+      type: els.type.value,
+      due_date: els.dueDate.value,
+      due_time: els.dueTime.value || null,
+      recurrence_kind: null,
+      recurrence_every: null,
+      recurrence_days: null,
+      recurrence_mode: null,
+      estimated_minutes: els.minutes.value === "" ? null : Number(els.minutes.value),
+      assignee: els.assignee.value.trim() || null,
+      status: els.status.value,
+      updated_at: new Date().toISOString(),
+    };
+
+    if (payload.estimated_minutes !== null && (!Number.isInteger(payload.estimated_minutes) || payload.estimated_minutes < 0)) {
+      return { error: "זמן משוער חייב להיות מספר שלם, 0 ומעלה." };
+    }
+
+    if (recurring) {
+      payload.recurrence_kind = els.kind.value;
+      payload.recurrence_mode = els.mode.value;
+      if (payload.recurrence_kind === "interval") {
+        const every = Number(els.every.value);
+        if (!Number.isInteger(every) || every < 1) return { error: "מספר הימים חייב להיות 1 ומעלה." };
+        payload.recurrence_every = every;
+      }
+      if (payload.recurrence_kind === "weekly") {
+        const days = selectedDays();
+        if (days.length === 0) return { error: "יש לבחור לפחות יום אחד בשבוע." };
+        payload.recurrence_days = days;
+      }
+    }
+    return { payload };
+  }
+
+  async function saveTask(event) {
+    event.preventDefault();
+    els.formError.textContent = "";
+    const { payload, error: validationError } = buildPayload();
+    if (validationError) {
+      els.formError.textContent = validationError;
+      return;
+    }
+
+    els.saveBtn.disabled = true;
+    const query = editingId
+      ? db.from("tasks").update(payload).eq("id", editingId)
+      : db.from("tasks").insert(payload);
+    const { error } = await query;
+    els.saveBtn.disabled = false;
+
+    if (error) {
+      els.formError.textContent = friendlyError(error);
+      return;
+    }
+    els.dialog.close();
+    await load();
+  }
+
+  async function removeTask(task) {
+    const ok = window.confirm(`למחוק את "${task.title}"? גם היסטוריית הביצועים שלה תימחק.`);
+    if (!ok) return;
+    const { error } = await db.from("tasks").delete().eq("id", task.id);
+    if (error) {
+      els.message.textContent = friendlyError(error);
+      return;
+    }
+    await load();
+  }
+
+  // ---------- אתחול ----------
+
+  function init(client) {
+    db = client;
+    els.newBtn.addEventListener("click", () => openForm(null));
+    els.cancelBtn.addEventListener("click", () => els.dialog.close());
+    els.form.addEventListener("submit", saveTask);
+    els.type.addEventListener("change", syncRecurrenceFields);
+    els.kind.addEventListener("change", syncRecurrenceFields);
+    [els.filterType, els.filterStatus, els.filterAssignee].forEach((f) => f.addEventListener("change", render));
+  }
+
+  window.TasksView = { init, load };
+})();
