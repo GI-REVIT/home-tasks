@@ -172,8 +172,28 @@
     return monthStart(Dates.addDays(monthStart(iso), -1));
   }
 
+  // היום ה-day בחודש העברי שמתחיל ב-startIso. בחודש קצר מדי (29 ימים) מתקבל היום האחרון בחודש.
+  function dateInMonth(startIso, day) {
+    return Dates.addDays(startIso, Math.min(day, monthLength(startIso)) - 1);
+  }
+
+  // המועד הראשון אחרי after שחל ביום ה-day של חודש עברי כלשהו (כל החודשים, כולל אדר א׳ ואדר ב׳).
+  function nextMonthlyOccurrence(day, after) {
+    let start = monthStart(after);
+    for (let i = 0; i < 30; i++) {
+      const cand = dateInMonth(start, day);
+      if (cand > after) return cand;
+      start = Dates.addDays(start, monthLength(start));
+    }
+    return null;
+  }
+
+  function matchesMonthDay(day, iso) {
+    return iso === dateInMonth(monthStart(iso), day);
+  }
+
   window.Hebrew = {
     gematriya, parts, dayLetters, yearLetters, monthYear, short, format, holidays,
-    monthStart, monthLength, nextMonthStart, prevMonthStart,
+    monthStart, monthLength, nextMonthStart, prevMonthStart, nextMonthlyOccurrence, matchesMonthDay,
   };
 })();

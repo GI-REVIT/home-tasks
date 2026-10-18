@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>משימות הבית</title>
-  <link rel="stylesheet" href="css/style.css?v=6">
+  <link rel="stylesheet" href="css/style.css?v=7">
 </head>
 <body>
   <main class="container">
@@ -163,9 +163,17 @@
               <option value="yearly">שנתית</option>
             </select>
           </label>
+          <label id="month-calendar-box" hidden>
+            לפי איזה לוח
+            <select id="f-month-calendar">
+              <option value="gregorian">לוח לועזי</option>
+              <option value="hebrew">לוח עברי</option>
+            </select>
+          </label>
           <label id="month-day-box" hidden>
-            יום בחודש
+            <span id="month-day-label">יום בחודש</span>
             <input type="number" id="f-month-day" min="1" max="31" value="1">
+            <span id="month-day-hint" class="muted"></span>
           </label>
           <label id="every-box" hidden>
             כל כמה ימים
@@ -256,13 +264,13 @@
   </dialog>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-  <script src="js/config.js?v=6"></script>
-  <script src="js/dates.js?v=6"></script>
-  <script src="js/hebrew.js?v=6"></script>
-  <script src="js/datepicker.js?v=6"></script>
-  <script src="js/tasks.js?v=6"></script>
-  <script src="js/agenda.js?v=6"></script>
-  <script src="js/month.js?v=6"></script>
-  <script src="js/app.js?v=6"></script>
+  <script src="js/config.js?v=7"></script>
+  <script src="js/dates.js?v=7"></script>
+  <script src="js/hebrew.js?v=7"></script>
+  <script src="js/datepicker.js?v=7"></script>
+  <script src="js/tasks.js?v=7"></script>
+  <script src="js/agenda.js?v=7"></script>
+  <script src="js/month.js?v=7"></script>
+  <script src="js/app.js?v=7"></script>
 </body>
 </html>

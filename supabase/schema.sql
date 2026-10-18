@@ -14,6 +14,7 @@ create table if not exists public.tasks (
   recurrence_every int check (recurrence_every > 0),   -- למשל כל 3 ימים
   recurrence_days  int[],                    -- לחזרה שבועית: 0 = ראשון ... 6 = שבת
   recurrence_month_day int check (recurrence_month_day between 1 and 31),  -- לחזרה חודשית: היום בחודש
+  recurrence_calendar text check (recurrence_calendar in ('gregorian', 'hebrew')),  -- לחזרה חודשית: לוח לועזי (ברירת מחדל) או עברי
   recurrence_mode  text check (recurrence_mode in ('schedule', 'after_completion')),
   estimated_minutes int check (estimated_minutes >= 0),
   assignee         text,                     -- טקסט חופשי, לתיעוד בלבד
@@ -81,3 +82,7 @@ create unique index if not exists completions_task_occurrence_uniq
 -- יום בחודש למשימות חודשיות (למי שהריצה את הסכמה לפני כן; בטוח להריץ שוב)
 alter table public.tasks add column if not exists recurrence_month_day int
   check (recurrence_month_day between 1 and 31);
+
+-- לוח עברי למשימות חודשיות (בטוח להריץ שוב)
+alter table public.tasks add column if not exists recurrence_calendar text
+  check (recurrence_calendar in ('gregorian', 'hebrew'));

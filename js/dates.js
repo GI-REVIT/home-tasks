@@ -95,6 +95,10 @@
         return null;
       }
       case "monthly": {
+        if (task.recurrence_calendar === "hebrew") {
+          const hebrewDay = task.recurrence_month_day || window.Hebrew.parts(start).day;
+          return window.Hebrew.nextMonthlyOccurrence(hebrewDay, from);
+        }
         const s = parse(start);
         const day = task.recurrence_month_day || s.d;
         for (let i = 0; i < 1200; i++) {
@@ -125,6 +129,7 @@
   function matchesRule(rule, iso) {
     if (rule.recurrence_kind === "weekly") return (rule.recurrence_days || []).includes(weekday(iso));
     if (rule.recurrence_kind === "monthly") {
+      if (rule.recurrence_calendar === "hebrew") return window.Hebrew.matchesMonthDay(rule.recurrence_month_day, iso);
       const { y, m, d } = parse(iso);
       return d === Math.min(rule.recurrence_month_day, daysInMonth(y, m));
     }
