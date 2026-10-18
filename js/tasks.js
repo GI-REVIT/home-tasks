@@ -1,6 +1,6 @@
 // ניהול משימות: רשימה, סינון, הוספה, עריכה ומחיקה.
 (function () {
-  const WEEKDAYS = ["א׳", "ב׳", "ג׳", "ד׳", "ה׳", "ו׳", "ש׳"]; // 0 = ראשון
+  const WEEKDAYS = ["א׳", "ב׳", "ג׳", "ד׳", "ה׳", "ו׳", "מוצאי שבת"]; // 0 = ראשון; משימה שבועית ליום שבת מתבצעת במוצאי שבת
   const STATUS_LABELS = { active: "פעילה", paused: "מושהית", completed: "הושלמה" };
 
   let db = null;
@@ -27,6 +27,7 @@
     type: $("f-type"),
     dueDate: $("f-due-date"),
     dueDateBox: $("due-date-box"),
+    dueDateBtn: $("f-due-date-btn"),
     monthDay: $("f-month-day"),
     monthDayBox: $("month-day-box"),
     modeBox: $("mode-box"),
@@ -95,6 +96,12 @@
     return "הפעולה נכשלה: " + (msg || "שגיאה לא מוכרת");
   }
 
+  // תאריך היעד נשמר כתאריך לועזי (YYYY-MM-DD) ומוצג גם בעברית.
+  function setDueDate(iso) {
+    els.dueDate.value = iso;
+    els.dueDateBtn.textContent = `${Hebrew.format(iso)} · ${Dates.formatDate(iso)}`;
+  }
+
   function el(tag, className, text) {
     const node = document.createElement(tag);
     if (className) node.className = className;
@@ -159,7 +166,7 @@
     if (t.description) main.appendChild(el("div", "muted", t.description));
 
     const meta = el("div", "task-meta");
-    const due = formatDate(t.due_date) + (t.due_time ? " " + t.due_time.slice(0, 5) : "");
+    const due = `${formatDate(t.due_date)} · ${Hebrew.short(t.due_date)}` + (t.due_time ? " " + t.due_time.slice(0, 5) : "");
     meta.appendChild(el("span", "badge", "יעד: " + due));
     meta.appendChild(el("span", "badge", t.type === "recurring" ? "חוזרת" : "חד-פעמית"));
     if (t.type === "recurring") meta.appendChild(el("span", "badge", recurrenceText(t)));
@@ -208,7 +215,7 @@
     els.title.value = task ? task.title : "";
     els.description.value = task ? task.description || "" : "";
     els.type.value = task ? task.type : "one_time";
-    els.dueDate.value = task ? task.due_date : todayISO();
+    setDueDate(task ? task.due_date : todayISO());
     els.dueTime.value = task && task.due_time ? task.due_time.slice(0, 5) : "";
     els.kind.value = task && task.recurrence_kind ? task.recurrence_kind : "daily";
     els.every.value = task && task.recurrence_every ? task.recurrence_every : 2;
@@ -345,6 +352,9 @@
   function init(client) {
     db = client;
     els.newBtn.addEventListener("click", () => openForm(null));
+    els.dueDateBtn.addEventListener("click", () =>
+      window.DatePicker.open({ value: els.dueDate.value || todayISO(), onPick: setDueDate })
+    );
     els.cancelBtn.addEventListener("click", () => els.dialog.close());
     els.form.addEventListener("submit", saveTask);
     els.type.addEventListener("change", syncRecurrenceFields);

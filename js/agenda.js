@@ -3,6 +3,7 @@
   const WEEK_DAYS = 7;
   const $ = (id) => document.getElementById(id);
   const els = {
+    todayDate: $("today-date"),
     todayTotal: $("today-total"),
     todayMessage: $("today-message"),
     overdueHeading: $("overdue-heading"),
@@ -53,6 +54,44 @@
     return "הפעולה נכשלה: " + ((error && error.message) || "שגיאה לא מוכרת");
   }
 
+  // תגיות חגים ומועדים ליום מסוים.
+  function holidayTags(iso) {
+    return Hebrew.holidays(iso).map((h) => el("span", "holiday-tag kind-" + h.kind, h.name));
+  }
+
+  // כותרת יום: "יום ראשון, 18/10 · ז׳ בחשוון" עם תגיות חגים.
+  function dayHeading(iso, suffix) {
+    const wrap = el("div", "day-title");
+    wrap.appendChild(el("h3", "", `${Dates.dayLabel(iso)} · ${Hebrew.short(iso)}${suffix || ""}`));
+    holidayTags(iso).forEach((tag) => wrap.appendChild(tag));
+    return wrap;
+  }
+
+  // משימות לפי תאריך בטווח [from, to]. משימה באיחור מוצבת ב"היום" (overdueAt = "today")
+  // או בתאריך היעד המקורי שלה (overdueAt = "due"). מופעים עתידיים של משימה חוזרת אינם ניתנים לסימון.
+  function itemsByDate(active, from, to, overdueAt) {
+    const today = Dates.todayISO();
+    const tomorrow = Dates.addDays(today, 1);
+    const map = new Map();
+    const put = (date, item) => {
+      if (date < from || date > to) return;
+      if (!map.has(date)) map.set(date, []);
+      map.get(date).push(item);
+    };
+    active.forEach((task) => {
+      if (task.due_date < today) {
+        put(overdueAt === "today" ? today : task.due_date, { task, overdue: true, actionable: true });
+        Dates.occurrences(task, from > tomorrow ? from : tomorrow, to).forEach((d) =>
+          put(d, { task, actionable: false })
+        );
+      } else {
+        Dates.occurrences(task, from, to).forEach((d) => put(d, { task, actionable: d === task.due_date }));
+      }
+    });
+    map.forEach((items) => items.sort(byTimeThenTitle));
+    return map;
+  }
+
   // ---------- תצוגה ----------
 
   function renderItem(item) {
@@ -101,6 +140,8 @@
     els.todayHeading.hidden = due.length === 0 || overdue.length === 0;
 
     const all = overdue.concat(due);
+    const heading = dayHeading(today);
+    els.todayDate.replaceChildren(...heading.childNodes);
     els.todayMessage.textContent = all.length === 0 ? "אין משימות להיום ואין משימות באיחור." : "";
     els.todayTotal.textContent = all.length ? "סה״כ זמן משוער: " + formatMinutes(sumMinutes(all)) : "";
   }
@@ -108,27 +149,15 @@
   function renderWeek(active) {
     const today = Dates.todayISO();
     const end = Dates.addDays(today, WEEK_DAYS - 1);
-    const tomorrow = Dates.addDays(today, 1);
-    const groups = new Map();
-    for (let i = 0; i < WEEK_DAYS; i++) groups.set(Dates.addDays(today, i), []);
-
-    active.forEach((task) => {
-      if (task.due_date < today) {
-        groups.get(today).push({ task, overdue: true, actionable: true });
-        Dates.occurrences(task, tomorrow, end).forEach((d) => groups.get(d).push({ task, actionable: false }));
-      } else {
-        Dates.occurrences(task, today, end).forEach((d) =>
-          groups.get(d).push({ task, actionable: d === task.due_date })
-        );
-      }
-    });
+    const byDate = itemsByDate(active, today, end, "today");
 
     const nodes = [];
-    groups.forEach((items, date) => {
-      items.sort(byTimeThenTitle);
+    for (let i = 0; i < WEEK_DAYS; i++) {
+      const date = Dates.addDays(today, i);
+      const items = byDate.get(date) || [];
       const group = el("section", "day-group");
       const head = el("div", "day-head");
-      head.appendChild(el("h3", "", Dates.dayLabel(date) + (date === today ? " (היום)" : "")));
+      head.appendChild(dayHeading(date, date === today ? " (היום)" : ""));
       if (items.length) head.appendChild(el("span", "muted", formatMinutes(sumMinutes(items))));
       group.appendChild(head);
       if (items.length === 0) {
@@ -139,7 +168,7 @@
         group.appendChild(list);
       }
       nodes.push(group);
-    });
+    }
     els.weekDays.replaceChildren(...nodes);
   }
 
@@ -219,5 +248,5 @@
     window.TasksView.onLoad(render);
   }
 
-  window.AgendaView = { init };
+  window.AgendaView = { init, renderItem, itemsByDate, holidayTags, dayHeading, formatMinutes, sumMinutes };
 })();

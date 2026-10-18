@@ -22,10 +22,12 @@
 
   window.TasksView.init(db);
   window.AgendaView.init(db);
+  window.MonthView.init();
 
   const views = {
     today: document.getElementById("today-view"),
     week: document.getElementById("week-view"),
+    month: document.getElementById("month-view"),
     all: document.getElementById("tasks-view"),
   };
   const tabs = document.querySelectorAll("#tabs .tab");

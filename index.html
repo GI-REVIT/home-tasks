@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>משימות הבית</title>
-  <link rel="stylesheet" href="css/style.css?v=5">
+  <link rel="stylesheet" href="css/style.css?v=6">
 </head>
 <body>
   <main class="container">
@@ -28,12 +28,16 @@
     <section id="app-view" hidden>
       <header class="topbar">
         <h1>משימות הבית</h1>
-        <button id="logout-btn" class="ghost">יציאה</button>
+        <div class="topbar-actions">
+          <button type="button" id="new-task-btn" class="primary">+ משימה חדשה</button>
+          <button id="logout-btn" class="ghost">יציאה</button>
+        </div>
       </header>
 
       <nav class="tabs" id="tabs">
         <button type="button" data-view="today" class="tab active">היום</button>
         <button type="button" data-view="week" class="tab">השבוע</button>
+        <button type="button" data-view="month" class="tab">החודש</button>
         <button type="button" data-view="all" class="tab">כל המשימות</button>
       </nav>
 
@@ -42,6 +46,7 @@
           <h2>היום</h2>
           <span id="today-total" class="muted"></span>
         </div>
+        <div id="today-date" class="today-date"></div>
         <p id="today-message" class="muted" role="status"></p>
         <h3 id="overdue-heading" class="overdue-heading" hidden>באיחור</h3>
         <ul id="overdue-list" class="tasks-list"></ul>
@@ -56,10 +61,23 @@
         <div id="week-days"></div>
       </section>
 
+      <section id="month-view" hidden>
+        <div class="toolbar">
+          <div class="month-nav">
+            <button type="button" id="month-prev" class="ghost" aria-label="חודש קודם">›</button>
+            <h2 id="month-title"></h2>
+            <button type="button" id="month-next" class="ghost" aria-label="חודש הבא">‹</button>
+          </div>
+          <button type="button" id="month-today">החודש הנוכחי</button>
+        </div>
+        <p id="month-hebrew" class="muted"></p>
+        <div id="month-grid" class="month-grid"></div>
+        <section id="month-day" class="month-day"></section>
+      </section>
+
       <section id="tasks-view" hidden>
         <div class="toolbar">
           <h2>כל המשימות</h2>
-          <button id="new-task-btn" class="primary">משימה חדשה</button>
         </div>
 
         <div class="filters">
@@ -121,10 +139,11 @@
             <option value="recurring">חוזרת</option>
           </select>
         </label>
-        <label id="due-date-box">
-          תאריך יעד
-          <input type="date" id="f-due-date" required>
-        </label>
+        <div id="due-date-box" class="field">
+          <span class="field-label">תאריך יעד</span>
+          <button type="button" id="f-due-date-btn" class="date-btn">בחירת תאריך</button>
+          <input type="hidden" id="f-due-date">
+        </div>
         <label>
           שעה (לא חובה)
           <input type="time" id="f-due-time">
@@ -162,7 +181,7 @@
           <label class="day"><input type="checkbox" name="day" value="3"> ד׳</label>
           <label class="day"><input type="checkbox" name="day" value="4"> ה׳</label>
           <label class="day"><input type="checkbox" name="day" value="5"> ו׳</label>
-          <label class="day"><input type="checkbox" name="day" value="6"> ש׳</label>
+          <label class="day"><input type="checkbox" name="day" value="6"> מוצאי שבת</label>
         </div>
 
         <label id="mode-box">
@@ -202,6 +221,25 @@
     </form>
   </dialog>
 
+  <dialog id="date-dialog">
+    <div class="picker">
+      <div class="picker-head">
+        <button type="button" id="picker-prev" class="ghost" aria-label="חודש קודם">›</button>
+        <div class="picker-title">
+          <strong id="picker-title"></strong>
+          <span id="picker-sub" class="muted"></span>
+        </div>
+        <button type="button" id="picker-next" class="ghost" aria-label="חודש הבא">‹</button>
+      </div>
+      <div id="picker-grid" class="picker-grid"></div>
+      <ul id="picker-holidays" class="picker-holidays"></ul>
+      <div class="actions">
+        <button type="button" id="picker-today">היום</button>
+        <button type="button" id="picker-close">סגירה</button>
+      </div>
+    </div>
+  </dialog>
+
   <dialog id="complete-dialog">
     <form id="complete-form" class="stack" novalidate>
       <h2 id="complete-title">סימון כבוצע</h2>
@@ -218,10 +256,13 @@
   </dialog>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-  <script src="js/config.js?v=5"></script>
-  <script src="js/dates.js?v=5"></script>
-  <script src="js/tasks.js?v=5"></script>
-  <script src="js/agenda.js?v=5"></script>
-  <script src="js/app.js?v=5"></script>
+  <script src="js/config.js?v=6"></script>
+  <script src="js/dates.js?v=6"></script>
+  <script src="js/hebrew.js?v=6"></script>
+  <script src="js/datepicker.js?v=6"></script>
+  <script src="js/tasks.js?v=6"></script>
+  <script src="js/agenda.js?v=6"></script>
+  <script src="js/month.js?v=6"></script>
+  <script src="js/app.js?v=6"></script>
 </body>
 </html>

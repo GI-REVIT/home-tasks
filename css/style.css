@@ -48,9 +48,9 @@ body {
 [hidden] { display: none !important; }
 
 .container {
-  max-width: 720px;
+  max-width: 880px;
   margin: 0 auto;
-  padding: 24px 16px;
+  padding: 0 16px 24px;
 }
 
 h1 {
@@ -349,3 +349,249 @@ h3 {
 }
 
 .day-group > p { margin: 0; }
+
+/* ---------- כפתור קבוע, לוח עברי, חגים ולוח חודשי ---------- */
+
+:root {
+  --holiday: #8a6d1f;
+  --holiday-bg: #f5efd9;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --holiday: #d9b85c;
+    --holiday-bg: #3a3420;
+  }
+}
+
+:root[data-theme="dark"] {
+  --holiday: #d9b85c;
+  --holiday-bg: #3a3420;
+}
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--bg);
+  padding: 12px 0;
+  margin-bottom: 4px;
+}
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.95rem;
+  color: var(--muted);
+  flex: 1;
+  min-width: 150px;
+}
+
+.date-btn {
+  width: 100%;
+  text-align: start;
+  background: var(--bg);
+  color: var(--text);
+  padding: 10px 12px;
+}
+
+.today-date,
+.day-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 8px;
+}
+
+.today-date { margin: 0 0 var(--gap); }
+
+.holiday-tag {
+  font-size: 0.78rem;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--holiday-bg);
+  color: var(--holiday);
+}
+
+.holiday-tag.kind-yomtov { font-weight: 600; }
+
+.holiday-tag.kind-rc {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted);
+}
+
+/* בורר תאריך עברי */
+
+.picker {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: min(340px, 100%);
+}
+
+.picker-head,
+.month-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.picker-head { justify-content: space-between; }
+
+.picker-title {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.picker-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.pk-weekday {
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.8rem;
+  padding: 4px 0;
+}
+
+.pk-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 6px 0;
+  border-radius: 8px;
+  background: var(--surface);
+  line-height: 1.2;
+}
+
+.pk-heb { font-weight: 600; }
+.pk-greg { font-size: 0.7rem; color: var(--muted); }
+.pk-day.today { border-color: var(--accent); }
+.pk-day.holiday { background: var(--holiday-bg); }
+.pk-day.yomtov { background: var(--holiday-bg); border-color: var(--holiday); }
+
+.pk-day.selected {
+  background: var(--accent);
+  color: var(--accent-text);
+  border-color: var(--accent);
+}
+
+.pk-day.selected .pk-greg { color: inherit; }
+
+.picker-holidays {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+  max-height: 150px;
+  overflow-y: auto;
+}
+
+.picker-holidays li { padding: 2px 0; }
+
+/* לוח חודשי */
+
+.month-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.mg-weekday {
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.85rem;
+  padding: 4px 0;
+}
+
+.mg-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 3px;
+  min-height: 108px;
+  padding: 6px;
+  text-align: start;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.mg-cell.outside { opacity: 0.5; }
+.mg-cell.today { border-color: var(--accent); border-width: 2px; }
+.mg-cell.selected { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+.mg-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.mg-num { font-weight: 600; }
+.mg-heb { font-size: 0.75rem; color: var(--muted); }
+
+.mg-holiday {
+  font-size: 0.7rem;
+  color: var(--holiday);
+  background: var(--holiday-bg);
+  border-radius: 4px;
+  padding: 0 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mg-holiday.rc {
+  color: var(--muted);
+  background: transparent;
+  padding: 0;
+}
+
+.mg-chips {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.chip {
+  display: block;
+  font-size: 0.72rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chip.overdue { color: var(--danger); border-color: var(--danger); }
+.chip.future { opacity: 0.65; }
+.chip.more { color: var(--muted); border: none; background: transparent; }
+
+.month-day { margin-top: 20px; }
+
+@media (max-width: 640px) {
+  .mg-cell { min-height: 68px; padding: 3px; }
+  .chip { font-size: 0.62rem; }
+  .mg-holiday { font-size: 0.6rem; }
+  .topbar-actions button { padding: 8px 10px; }
+}
+
+#date-dialog { width: min(380px, calc(100vw - 32px)); }
+#complete-dialog { width: min(420px, calc(100vw - 32px)); }

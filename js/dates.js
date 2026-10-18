@@ -170,7 +170,7 @@
   }
 
   window.Dates = {
-    todayISO, addDays, addMonths, addYears, daysBetween, weekday,
+    todayISO, addDays, addMonths, addYears, daysBetween, weekday, toDate, daysInMonth,
     formatDate, dayLabel, nextScheduled, nextDueDate, occurrences, firstOnOrAfter, matchesRule, parse,
   };
 })();
