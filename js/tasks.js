@@ -34,6 +34,8 @@
     monthDayHint: $("month-day-hint"),
     monthCalendar: $("f-month-calendar"),
     monthCalendarBox: $("month-calendar-box"),
+    hebrewMonth: $("f-hebrew-month"),
+    hebrewMonthBox: $("hebrew-month-box"),
     modeBox: $("mode-box"),
     dueTime: $("f-due-time"),
     recurrenceBox: $("recurrence-box"),
@@ -84,10 +86,16 @@
         }
         break;
       case "yearly":
-        text = "שנתית";
+        text =
+          t.recurrence_calendar === "hebrew"
+            ? `שנתית עברית, ${Hebrew.gematriya(t.recurrence_month_day)} ב${Hebrew.monthLabel(t.recurrence_hebrew_month)}`
+            : "שנתית";
         break;
     }
-    const fixedDay = t.recurrence_kind === "weekly" || t.recurrence_kind === "monthly";
+    const fixedDay =
+      t.recurrence_kind === "weekly" ||
+      t.recurrence_kind === "monthly" ||
+      (t.recurrence_kind === "yearly" && t.recurrence_calendar === "hebrew");
     if (fixedDay && t.recurrence_mode !== "after_completion") return text;
     const mode = t.recurrence_mode === "after_completion" ? "לפי ביצוע" : "לפי לוח";
     return `${text} (${mode})`;
@@ -97,6 +105,9 @@
     const msg = (error && error.message) || "";
     if (error && error.code === "42501") {
       return "אין הרשאה לשמור נתונים. יש להריץ את חלק ההרשאות (grant) מקובץ supabase/schema.sql.";
+    }
+    if (msg.includes("recurrence_hebrew_month")) {
+      return "חסר שדה חודש עברי בבסיס הנתונים. יש להריץ ב-Supabase את שורת ה-SQL של recurrence_hebrew_month.";
     }
     if (msg.includes("recurrence_calendar")) {
       return "חסר שדה לוח עברי בבסיס הנתונים. יש להריץ ב-Supabase את שורת ה-SQL של recurrence_calendar.";
@@ -204,25 +215,27 @@
   function syncRecurrenceFields() {
     const recurring = els.type.value === "recurring";
     const kind = els.kind.value;
-    const fixedDay = recurring && (kind === "weekly" || kind === "monthly");
+    const yearlyHebrew = recurring && kind === "yearly" && isHebrewCalendar();
+    const fixedDay = recurring && (kind === "weekly" || kind === "monthly" || yearlyHebrew);
     els.recurrenceBox.hidden = !recurring;
     els.everyBox.hidden = !recurring || kind !== "interval";
     els.daysBox.hidden = !recurring || kind !== "weekly";
-    els.monthDayBox.hidden = !recurring || kind !== "monthly";
-    els.monthCalendarBox.hidden = !recurring || kind !== "monthly";
+    els.monthDayBox.hidden = !(recurring && kind === "monthly") && !yearlyHebrew;
+    els.monthCalendarBox.hidden = !recurring || (kind !== "monthly" && kind !== "yearly");
+    els.hebrewMonthBox.hidden = !yearlyHebrew;
     syncMonthDayField();
     // בשבועית ובחודשית בוחרים יום קבוע, ולכן אין תאריך יעד ידני ואין בחירת אופן חישוב.
     els.dueDateBox.hidden = fixedDay;
     els.modeBox.hidden = fixedDay;
   }
 
-  function isHebrewMonthly() {
+  function isHebrewCalendar() {
     return els.monthCalendar.value === "hebrew";
   }
 
   // יום בחודש: 1-31 בלוח לועזי, 1-30 בלוח עברי (עם הצגת האות).
   function syncMonthDayField() {
-    const hebrew = isHebrewMonthly();
+    const hebrew = isHebrewCalendar();
     els.monthDayLabel.textContent = hebrew ? "יום בחודש העברי (1–30)" : "יום בחודש (1–31)";
     els.monthDay.max = hebrew ? 30 : 31;
     const n = Number(els.monthDay.value);
@@ -231,7 +244,7 @@
 
   function defaultMonthDay() {
     const iso = els.dueDate.value || todayISO();
-    return isHebrewMonthly() ? Hebrew.parts(iso).day : Dates.parse(iso).d;
+    return isHebrewCalendar() ? Hebrew.parts(iso).day : Dates.parse(iso).d;
   }
 
   function selectedDays() {
@@ -252,6 +265,7 @@
     els.every.value = task && task.recurrence_every ? task.recurrence_every : 2;
     els.monthCalendar.value = task && task.recurrence_calendar === "hebrew" ? "hebrew" : "gregorian";
     els.monthDay.value = task && task.recurrence_month_day ? task.recurrence_month_day : defaultMonthDay();
+    els.hebrewMonth.value = task && task.recurrence_hebrew_month ? task.recurrence_hebrew_month : Hebrew.monthKey(els.dueDate.value);
     els.mode.value = task && task.recurrence_mode ? task.recurrence_mode : "schedule";
     const days = task && task.recurrence_days ? task.recurrence_days : [];
     els.daysBox.querySelectorAll("input[name=day]").forEach((c) => {
@@ -272,7 +286,8 @@
 
     const recurring = els.type.value === "recurring";
     const kind = els.kind.value;
-    const fixedDay = recurring && (kind === "weekly" || kind === "monthly");
+    const yearlyHebrew = recurring && kind === "yearly" && isHebrewCalendar();
+    const fixedDay = recurring && (kind === "weekly" || kind === "monthly" || yearlyHebrew);
     if (!fixedDay && !els.dueDate.value) return { error: "יש להזין תאריך יעד." };
 
     const existing = editingId ? tasks.find((t) => t.id === editingId) : null;
@@ -311,9 +326,9 @@
         if (days.length === 0) return { error: "יש לבחור לפחות יום אחד בשבוע." };
         payload.recurrence_days = days;
       }
-      if (kind === "monthly") {
+      if (kind === "monthly" || yearlyHebrew) {
         monthDay = Number(els.monthDay.value);
-        const max = isHebrewMonthly() ? 30 : 31;
+        const max = isHebrewCalendar() ? 30 : 31;
         if (!Number.isInteger(monthDay) || monthDay < 1 || monthDay > max) {
           return { error: `היום בחודש חייב להיות בין 1 ל-${max}.` };
         }
@@ -325,11 +340,17 @@
       payload.recurrence_month_day = null;
     }
     // השדה recurrence_calendar נשלח רק כשצריך, מאותה סיבה.
-    const hebrewMonthly = monthDay !== null && isHebrewMonthly();
-    if (hebrewMonthly) {
+    const hebrewCalendar = monthDay !== null && isHebrewCalendar();
+    const hebrewMonthKey = yearlyHebrew ? Number(els.hebrewMonth.value) : null;
+    if (hebrewCalendar || (recurring && kind === "yearly" && isHebrewCalendar())) {
       payload.recurrence_calendar = "hebrew";
     } else if (existing && existing.recurrence_calendar != null) {
       payload.recurrence_calendar = null;
+    }
+    if (hebrewMonthKey !== null) {
+      payload.recurrence_hebrew_month = hebrewMonthKey;
+    } else if (existing && existing.recurrence_hebrew_month != null) {
+      payload.recurrence_hebrew_month = null;
     }
 
     if (fixedDay) {
@@ -338,13 +359,14 @@
         recurrence_kind: kind,
         recurrence_days: payload.recurrence_days,
         recurrence_month_day: monthDay,
-        recurrence_calendar: hebrewMonthly ? "hebrew" : null,
+        recurrence_calendar: hebrewCalendar ? "hebrew" : null,
+        recurrence_hebrew_month: hebrewMonthKey,
       };
       const keep =
         existing &&
         existing.type === "recurring" &&
         existing.recurrence_kind === kind &&
-        (existing.recurrence_calendar === "hebrew") === hebrewMonthly &&
+        (existing.recurrence_calendar === "hebrew") === hebrewCalendar &&
         Dates.matchesRule(rule, existing.due_date);
       payload.due_date = keep ? existing.due_date : Dates.firstOnOrAfter(rule, todayISO());
     }
@@ -400,7 +422,8 @@
     els.kind.addEventListener("change", syncRecurrenceFields);
     els.monthCalendar.addEventListener("change", () => {
       els.monthDay.value = defaultMonthDay();
-      syncMonthDayField();
+      els.hebrewMonth.value = Hebrew.monthKey(els.dueDate.value || todayISO());
+      syncRecurrenceFields();
     });
     els.monthDay.addEventListener("input", syncMonthDayField);
     [els.filterType, els.filterStatus, els.filterAssignee].forEach((f) => f.addEventListener("change", render));

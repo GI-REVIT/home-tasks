@@ -108,6 +108,12 @@
         return null;
       }
       case "yearly": {
+        if (task.recurrence_calendar === "hebrew") {
+          const H = window.Hebrew;
+          const key = task.recurrence_hebrew_month || H.monthKey(start);
+          const day = task.recurrence_month_day || H.parts(start).day;
+          return H.nextYearlyOccurrence(key, day, from);
+        }
         const s = parse(start);
         for (let i = 0; i < 200; i++) {
           const cand = build(s.y + i, s.m, s.d);
@@ -132,6 +138,9 @@
       if (rule.recurrence_calendar === "hebrew") return window.Hebrew.matchesMonthDay(rule.recurrence_month_day, iso);
       const { y, m, d } = parse(iso);
       return d === Math.min(rule.recurrence_month_day, daysInMonth(y, m));
+    }
+    if (rule.recurrence_kind === "yearly" && rule.recurrence_calendar === "hebrew") {
+      return window.Hebrew.matchesYearly(rule.recurrence_hebrew_month, rule.recurrence_month_day, iso);
     }
     return false;
   }

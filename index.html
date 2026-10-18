@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>משימות הבית</title>
-  <link rel="stylesheet" href="css/style.css?v=7">
+  <link rel="stylesheet" href="css/style.css?v=8">
 </head>
 <body>
   <main class="container">
@@ -170,6 +170,24 @@
               <option value="hebrew">לוח עברי</option>
             </select>
           </label>
+          <label id="hebrew-month-box" hidden>
+            חודש עברי
+            <select id="f-hebrew-month">
+              <option value="1">תשרי</option>
+              <option value="2">חשוון</option>
+              <option value="3">כסלו</option>
+              <option value="4">טבת</option>
+              <option value="5">שבט</option>
+              <option value="6">אדר א׳ (בשנה מעוברת)</option>
+              <option value="7">אדר (או אדר ב׳)</option>
+              <option value="8">ניסן</option>
+              <option value="9">אייר</option>
+              <option value="10">סיוון</option>
+              <option value="11">תמוז</option>
+              <option value="12">אב</option>
+              <option value="13">אלול</option>
+            </select>
+          </label>
           <label id="month-day-box" hidden>
             <span id="month-day-label">יום בחודש</span>
             <input type="number" id="f-month-day" min="1" max="31" value="1">
@@ -264,13 +282,13 @@
   </dialog>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-  <script src="js/config.js?v=7"></script>
-  <script src="js/dates.js?v=7"></script>
-  <script src="js/hebrew.js?v=7"></script>
-  <script src="js/datepicker.js?v=7"></script>
-  <script src="js/tasks.js?v=7"></script>
-  <script src="js/agenda.js?v=7"></script>
-  <script src="js/month.js?v=7"></script>
-  <script src="js/app.js?v=7"></script>
+  <script src="js/config.js?v=8"></script>
+  <script src="js/dates.js?v=8"></script>
+  <script src="js/hebrew.js?v=8"></script>
+  <script src="js/datepicker.js?v=8"></script>
+  <script src="js/tasks.js?v=8"></script>
+  <script src="js/agenda.js?v=8"></script>
+  <script src="js/month.js?v=8"></script>
+  <script src="js/app.js?v=8"></script>
 </body>
 </html>

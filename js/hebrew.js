@@ -192,8 +192,78 @@
     return iso === dateInMonth(monthStart(iso), day);
   }
 
+  // ---------- מועדים שנתיים לפי התאריך העברי ----------
+
+  // מספר החודש בשנה העברית (תשרי = 1). אדר ואדר ב׳ הם אותו מספר (7), אדר א׳ הוא 6.
+  const MONTH_KEYS = {
+    Tishri: 1, Heshvan: 2, Kislev: 3, Tevet: 4, Shevat: 5, "Adar I": 6, Adar: 7, "Adar II": 7,
+    Nisan: 8, Iyar: 9, Sivan: 10, Tamuz: 11, Av: 12, Elul: 13,
+  };
+  const MONTH_NAMES = {
+    1: "Tishri", 2: "Heshvan", 3: "Kislev", 4: "Tevet", 5: "Shevat", 8: "Nisan",
+    9: "Iyar", 10: "Sivan", 11: "Tamuz", 12: "Av", 13: "Elul",
+  };
+  const MONTH_LABELS = [
+    "תשרי", "חשוון", "כסלו", "טבת", "שבט", "אדר א׳", "אדר", "ניסן", "אייר", "סיוון", "תמוז", "אב", "אלול",
+  ];
+  const yearCache = new Map();
+
+  function monthKey(iso) {
+    return MONTH_KEYS[parts(iso).month];
+  }
+
+  function monthLabel(key) {
+    return MONTH_LABELS[key - 1];
+  }
+
+  // החודשים של השנה העברית שמכילה את iso: שם, יום ראשון ואורך כל חודש.
+  function yearInfo(iso) {
+    const year = parts(iso).year;
+    let info = yearCache.get(year);
+    if (info) return info;
+    let start = monthStart(iso);
+    while (parts(start).month !== "Tishri") start = prevMonthStart(start);
+    const months = [];
+    let s = start;
+    do {
+      const length = monthLength(s);
+      months.push({ name: parts(s).month, start: s, length });
+      s = Dates.addDays(s, length);
+    } while (parts(s).month !== "Tishri");
+    info = { year, months, nextStart: s };
+    yearCache.set(year, info);
+    return info;
+  }
+
+  // כללי יום הולדת ויום שנה (Reingold ו-Dershowitz): אדר ואדר ב׳ תמיד בחודש האחרון של השנה,
+  // אדר א׳ בשנה רגילה עובר לאדר, ויום 30 בחודש קצר נדחה ל-1 בחודש שאחריו.
+  function occurrenceInYear(info, key, day) {
+    const leap = info.months.some((m) => m.name === "Adar I");
+    let name;
+    if (key === 6) name = leap ? "Adar I" : "Adar";
+    else if (key === 7) name = leap ? "Adar II" : "Adar";
+    else name = MONTH_NAMES[key];
+    const month = info.months.find((m) => m.name === name);
+    return Dates.addDays(month.start, day - 1);
+  }
+
+  function nextYearlyOccurrence(key, day, after) {
+    let info = yearInfo(after);
+    for (let i = 0; i < 3; i++) {
+      const cand = occurrenceInYear(info, key, day);
+      if (cand > after) return cand;
+      info = yearInfo(info.nextStart);
+    }
+    return null;
+  }
+
+  function matchesYearly(key, day, iso) {
+    return iso === occurrenceInYear(yearInfo(iso), key, day);
+  }
+
   window.Hebrew = {
     gematriya, parts, dayLetters, yearLetters, monthYear, short, format, holidays,
     monthStart, monthLength, nextMonthStart, prevMonthStart, nextMonthlyOccurrence, matchesMonthDay,
+    monthKey, monthLabel, nextYearlyOccurrence, matchesYearly, MONTH_LABELS,
   };
 })();
